@@ -18,20 +18,24 @@ impl Card {
         }
     }
 
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+
+    pub fn matches(&self) -> u32 {
+        self.have
+            .iter()
+            .filter(|n| self.winning.contains(n))
+            .count() as u32
+    }
+
     pub fn points(&self) -> u32 {
-        let mut points = 0;
-
-        for have in self.have.iter() {
-            if self.winning.contains(have) {
-                if points == 0 {
-                    points = 1;
-                } else {
-                    points *= 2;
-                }
-            }
+        let matches = self.matches();
+        if matches == 0 {
+            0
+        } else {
+            2u32.pow(matches - 1)
         }
-
-        points
     }
 }
 
