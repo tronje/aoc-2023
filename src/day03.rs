@@ -66,6 +66,12 @@ pub struct Symbol {
     addr: FixedAddress,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct Gear {
+    symbol: Symbol,
+    pub ratio: u32,
+}
+
 #[derive(Debug)]
 pub struct EngineSchematic {
     numbers: Vec<Number>,
@@ -144,5 +150,40 @@ impl EngineSchematic {
         }
 
         part_nos
+    }
+
+    pub fn gears(&self) -> Vec<Gear> {
+        let mut gears = Vec::new();
+
+        'outer: for symbol in self.symbols.iter() {
+            if symbol.sym != '*' {
+                continue;
+            }
+
+            let mut num_a = None;
+            let mut num_b = None;
+
+            for number in self.numbers.iter() {
+                if number.addr.is_adjacent_to(&symbol.addr) {
+                    if num_a.is_none() {
+                        num_a.replace(number.num);
+                    } else if num_b.is_none() {
+                        num_b.replace(number.num);
+                    } else {
+                        // more than two adjacent numbers means it's not a valid gear
+                        continue 'outer;
+                    }
+                }
+            }
+
+            if let (Some(a), Some(b)) = (num_a, num_b) {
+                gears.push(Gear {
+                    symbol: *symbol,
+                    ratio: a * b,
+                });
+            }
+        }
+
+        gears
     }
 }
