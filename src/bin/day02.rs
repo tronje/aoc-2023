@@ -35,7 +35,22 @@ fn part_one() -> Result<u32> {
     Ok(result)
 }
 
+fn part_two() -> Result<u32> {
+    let games = parse_games()?;
+
+    let result = games
+        .iter()
+        .map(Game::minimum_configuration)
+        .map(|cubeset| cubeset.power())
+        .sum();
+
+    Ok(result)
+}
+
 fn main() {
     let id_sum = part_one().unwrap();
-    println!("{id_sum}");
+    println!("Part one: {id_sum}");
+
+    let power_sum = part_two().unwrap();
+    println!("Part two: {power_sum}");
 }

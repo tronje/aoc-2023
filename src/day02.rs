@@ -34,6 +34,10 @@ impl CubeSet {
     fn total(&self) -> u32 {
         self.red + self.green + self.blue
     }
+
+    pub fn power(&self) -> u32 {
+        self.red * self.green * self.blue
+    }
 }
 
 #[derive(Debug)]
@@ -67,6 +71,26 @@ impl Game {
         }
 
         true
+    }
+
+    pub fn minimum_configuration(&self) -> CubeSet {
+        let mut min_config = CubeSet::empty();
+
+        for subset in self.revealed_subsets.iter() {
+            if subset.red > min_config.red {
+                min_config.red = subset.red;
+            }
+
+            if subset.green > min_config.green {
+                min_config.green = subset.green;
+            }
+
+            if subset.blue > min_config.blue {
+                min_config.blue = subset.blue;
+            }
+        }
+
+        min_config
     }
 }
 
