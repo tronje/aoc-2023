@@ -9,15 +9,26 @@ struct Range {
 }
 
 impl Range {
-    fn contains(&self, src: u64) -> bool {
+    fn contains_src(&self, src: u64) -> bool {
         src >= self.src && src < (self.src + self.len)
     }
 
-    fn convert(&self, src: u64) -> u64 {
-        debug_assert!(self.contains(src));
+    fn contains_dst(&self, dst: u64) -> bool {
+        dst >= self.dst && dst < (self.dst + self.len)
+    }
+
+    fn convert_down(&self, src: u64) -> u64 {
+        debug_assert!(self.contains_src(src));
 
         let offset = src - self.src;
         self.dst + offset
+    }
+
+    fn convert_up(&self, dst: u64) -> u64 {
+        debug_assert!(self.contains_dst(dst));
+
+        let offset = dst - self.dst;
+        self.src + offset
     }
 }
 
@@ -48,10 +59,20 @@ impl ConversionMap {
         self.ranges.push(Range { dst, src, len });
     }
 
-    fn convert(&self, n: u64) -> u64 {
+    fn convert_down(&self, n: u64) -> u64 {
         for range in self.ranges.iter() {
-            if range.contains(n) {
-                return range.convert(n);
+            if range.contains_src(n) {
+                return range.convert_down(n);
+            }
+        }
+
+        n
+    }
+
+    fn convert_up(&self, n: u64) -> u64 {
+        for range in self.ranges.iter() {
+            if range.contains_dst(n) {
+                return range.convert_up(n);
             }
         }
 
@@ -59,22 +80,48 @@ impl ConversionMap {
     }
 }
 
+#[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
+struct SeedRange {
+    start: u64,
+    len: u64,
+}
+
+impl SeedRange {
+    fn new(start: u64, len: u64) -> Self {
+        Self { start, len }
+    }
+
+    fn contains(&self, n: u64) -> bool {
+        n >= self.start && n < (self.start + self.len)
+    }
+}
+
 #[derive(Debug)]
 pub struct Almanac {
     seeds: Vec<u64>,
+    seed_ranges: Vec<SeedRange>,
     maps: Vec<ConversionMap>,
 }
 
 impl Almanac {
     fn convert_down(mut seed: u64, maps: &[ConversionMap]) -> u64 {
         for map in maps {
-            seed = map.convert(seed);
+            seed = map.convert_down(seed);
         }
 
         seed
     }
 
-    pub fn min_location(&self) -> u64 {
+    fn convert_up(mut location: u64, maps: &[ConversionMap]) -> u64 {
+        for map in maps.iter().rev() {
+            location = map.convert_up(location);
+        }
+
+        location
+    }
+
+    /// Convert all seeds down to locations and return the minimum of those locations.
+    pub fn part_one(&self) -> u64 {
         self.seeds
             .iter()
             .map(|seed| Self::convert_down(*seed, &self.maps))
@@ -82,11 +129,27 @@ impl Almanac {
             .unwrap()
     }
 
+    /// Keep guessing locations, starting at 0, and convert backwards until a valid seed is found.
+    ///
+    /// The first location that maps to a valid seed must be the minimum.
+    pub fn part_two(&mut self) -> u64 {
+        for location in 0..u64::max_value() {
+            let seed = Self::convert_up(location, &self.maps);
+
+            if self.seed_ranges.iter().any(|sr| sr.contains(seed)) {
+                return location;
+            }
+        }
+
+        panic!()
+    }
+
     pub fn parse<R>(reader: R) -> Result<Self>
     where
         R: BufRead,
     {
         let mut seeds = Vec::new();
+        let mut seed_ranges = Vec::new();
         let mut maps = Vec::new();
 
         let mut current_map = None;
@@ -99,8 +162,18 @@ impl Almanac {
             }
 
             if line.starts_with("seeds:") {
+                // part one, single seeds
                 for seed in line.split(' ').skip(1).map(str::parse::<u64>) {
                     seeds.push(seed?);
+                }
+
+                // part two, seed ranges
+                let mut start = None;
+                for n in line.split(' ').skip(1).map(str::parse::<u64>) {
+                    match start.take() {
+                        Some(start) => seed_ranges.push(SeedRange::new(start, n?)),
+                        None => start = Some(n?),
+                    }
                 }
 
                 continue;
@@ -136,6 +209,10 @@ impl Almanac {
             None => return Err(anyhow!("invalid input")),
         };
 
-        Ok(Self { seeds, maps })
+        Ok(Self {
+            seeds,
+            seed_ranges,
+            maps,
+        })
     }
 }
