@@ -9,8 +9,22 @@ fn part_one() -> Result<u32> {
     let f = File::open(PATH)?;
     let reader = BufReader::new(f);
 
-    let mut hands = Hand::parse(reader)?;
-    hands.sort();
+    let hands = Hand::<false>::parse(reader)?;
+
+    let winnings: u32 = hands
+        .iter()
+        .enumerate()
+        .map(|(idx, hand)| hand.value(idx + 1))
+        .sum();
+
+    Ok(winnings)
+}
+
+fn part_two() -> Result<u32> {
+    let f = File::open(PATH)?;
+    let reader = BufReader::new(f);
+
+    let hands = Hand::<true>::parse(reader)?;
 
     let winnings: u32 = hands
         .iter()
@@ -24,4 +38,7 @@ fn part_one() -> Result<u32> {
 fn main() {
     let winnings = part_one().unwrap();
     println!("Part one: {winnings}");
+
+    let winnings = part_two().unwrap();
+    println!("Part two: {winnings}");
 }

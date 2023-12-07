@@ -5,27 +5,38 @@ use std::io::BufRead;
 use std::str::FromStr;
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
-pub struct Card(u32);
+struct Card<const JOKERS: bool>(u32);
 
-impl Card {
+impl<const JOKERS: bool> Card<JOKERS> {
+    fn as_idx(self) -> usize {
+        (self.0 - 2) as usize
+    }
+
     fn as_int(self) -> u32 {
-        self.0
+        if JOKERS {
+            match self.0 {
+                11 => 1,
+                n => n,
+            }
+        } else {
+            self.0
+        }
     }
 }
 
-impl PartialOrd for Card {
+impl<const JOKERS: bool> PartialOrd for Card<JOKERS> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Card {
+impl<const JOKERS: bool> Ord for Card<JOKERS> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.as_int().cmp(&other.as_int())
     }
 }
 
-impl TryFrom<char> for Card {
+impl<const JOKERS: bool> TryFrom<char> for Card<JOKERS> {
     type Error = anyhow::Error;
 
     fn try_from(c: char) -> Result<Self, Self::Error> {
@@ -50,52 +61,42 @@ impl TryFrom<char> for Card {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum HandType {
-    HighCard,
-    Pair,
-    TwoPair,
-    Triple,
-    FullHouse,
-    Quartet,
-    Quintet,
-}
-
 #[derive(Debug, Default)]
-pub struct Hand {
-    cards: [Card; 5],
+pub struct Hand<const JOKERS: bool> {
+    cards: [Card<JOKERS>; 5],
     bet: u32,
 }
 
-impl Hand {
-    fn hand_type(&self) -> HandType {
+impl<const JOKERS: bool> Hand<JOKERS> {
+    /// Hand type is nicely expressed by a tuple of the two most significant numbers of the card
+    /// count.
+    fn hand_type(&self) -> (u32, u32) {
         let mut card_counts = [0; 13];
 
         for card in self.cards.iter() {
-            card_counts[card.as_int() as usize - 2] += 1;
+            card_counts[card.as_idx()] += 1;
         }
 
-        let max = *card_counts.iter().max().unwrap();
-
-        if max == 5 {
-            HandType::Quintet
-        } else if max == 4 {
-            HandType::Quartet
-        } else if max == 3 {
-            if card_counts.iter().any(|count| *count == 2) {
-                HandType::FullHouse
-            } else {
-                HandType::Triple
-            }
-        } else if max == 2 {
-            if card_counts.iter().filter(|&count| *count == 2).count() == 2 {
-                HandType::TwoPair
-            } else {
-                HandType::Pair
-            }
+        let jokers = if JOKERS {
+            std::mem::replace(&mut card_counts[Card::<JOKERS>(11).as_idx()], 0)
         } else {
-            HandType::HighCard
+            0
+        };
+
+        let mut most = 0;
+        let mut second_most = 0;
+
+        for &count in card_counts.iter() {
+            if count > most {
+                second_most = most;
+                most = count;
+            } else if count > second_most {
+                second_most = count;
+            }
         }
+
+        let rem = (most + jokers) % 5;
+        ((most + jokers).min(5), second_most + rem)
     }
 
     pub fn value(&self, rank: usize) -> u32 {
@@ -114,25 +115,26 @@ impl Hand {
             hands.push(line.parse()?);
         }
 
+        hands.sort();
         Ok(hands)
     }
 }
 
-impl PartialEq for Hand {
+impl<const JOKERS: bool> PartialEq for Hand<JOKERS> {
     fn eq(&self, other: &Self) -> bool {
         self.cards == other.cards
     }
 }
 
-impl Eq for Hand {}
+impl<const JOKERS: bool> Eq for Hand<JOKERS> {}
 
-impl PartialOrd for Hand {
+impl<const JOKERS: bool> PartialOrd for Hand<JOKERS> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Hand {
+impl<const JOKERS: bool> Ord for Hand<JOKERS> {
     fn cmp(&self, other: &Self) -> Ordering {
         let type_order = self.hand_type().cmp(&other.hand_type());
 
@@ -152,7 +154,7 @@ impl Ord for Hand {
     }
 }
 
-impl FromStr for Hand {
+impl<const JOKERS: bool> FromStr for Hand<JOKERS> {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -183,10 +185,9 @@ mod tests {
     static EXAMPLE: &str = "32T3K 765\nT55J5 684\nKK677 28\nKTJJT 220\nQQQJA 483";
 
     #[test]
-    fn example_input() {
+    fn example_input_part1() {
         let reader = BufReader::new(EXAMPLE.as_bytes());
-        let mut hands = Hand::parse(reader).unwrap();
-        hands.sort();
+        let hands = Hand::<false>::parse(reader).unwrap();
 
         let winnings: u32 = hands
             .iter()
@@ -195,5 +196,19 @@ mod tests {
             .sum();
 
         assert_eq!(winnings, 6440);
+    }
+
+    #[test]
+    fn example_input_part2() {
+        let reader = BufReader::new(EXAMPLE.as_bytes());
+        let hands = Hand::<true>::parse(reader).unwrap();
+
+        let winnings: u32 = hands
+            .iter()
+            .enumerate()
+            .map(|(idx, hand)| hand.value(idx + 1))
+            .sum();
+
+        assert_eq!(winnings, 5905);
     }
 }
