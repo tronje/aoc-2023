@@ -1,6 +1,7 @@
 //! Advent of Code 2023
 //!
-//! Individual solutions live in `src/bin/`. Shared code lives in this library.
+//! Runnable programs live in `src/bin/`. Most solution logic lives in `src/day<n>.rs`, i.e. in the
+//! library part of this crate.
 //! Happy coding!
 
 pub mod day01;
