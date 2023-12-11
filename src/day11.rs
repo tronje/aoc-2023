@@ -39,32 +39,16 @@ impl Universe {
     }
 
     pub fn expand(&mut self, n: usize) {
-        let mut empty_rows = Vec::new();
-        let mut empty_columns = Vec::new();
-
-        for row in 0..self.height {
+        for row in (0..self.height).rev() {
             if !self.galaxies.iter().any(|g| g.y == row) {
-                empty_rows.push(row);
+                self.expand_row(row, n);
             }
         }
 
-        for column in 0..self.width {
+        for column in (0..self.width).rev() {
             if !self.galaxies.iter().any(|g| g.x == column) {
-                empty_columns.push(column);
+                self.expand_column(column, n);
             }
-        }
-
-        let mut count = 0;
-
-        for row in empty_rows {
-            self.expand_row(row + count, n);
-            count += n;
-        }
-
-        count = 0;
-        for column in empty_columns {
-            self.expand_column(column + count, n);
-            count += n;
         }
     }
 
