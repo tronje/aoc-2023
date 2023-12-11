@@ -9,13 +9,26 @@ fn part_one() -> Result<usize> {
     let f = File::open(PATH)?;
     let reader = BufReader::new(f);
     let mut universe = Universe::parse(reader)?;
-    universe.expand();
+    universe.expand(1);
 
-    let result = universe.solve_p1();
+    let result = universe.solve();
+    Ok(result)
+}
+
+fn part_two() -> Result<usize> {
+    let f = File::open(PATH)?;
+    let reader = BufReader::new(f);
+    let mut universe = Universe::parse(reader)?;
+    universe.expand(999_999);
+
+    let result = universe.solve();
     Ok(result)
 }
 
 fn main() {
     let sum = part_one().unwrap();
     println!("Part one: {sum}");
+
+    let sum = part_two().unwrap();
+    println!("Part two: {sum}");
 }

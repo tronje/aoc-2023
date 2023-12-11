@@ -24,21 +24,21 @@ pub struct Universe {
 }
 
 impl Universe {
-    fn expand_row(&mut self, row: usize) {
+    fn expand_row(&mut self, row: usize, n: usize) {
         self.galaxies
             .iter_mut()
             .filter(|g| g.y > row)
-            .for_each(|g| g.y += 1);
+            .for_each(|g| g.y += n);
     }
 
-    fn expand_column(&mut self, column: usize) {
+    fn expand_column(&mut self, column: usize, n: usize) {
         self.galaxies
             .iter_mut()
             .filter(|g| g.x > column)
-            .for_each(|g| g.x += 1);
+            .for_each(|g| g.x += n);
     }
 
-    pub fn expand(&mut self) {
+    pub fn expand(&mut self, n: usize) {
         let mut empty_rows = Vec::new();
         let mut empty_columns = Vec::new();
 
@@ -57,18 +57,18 @@ impl Universe {
         let mut count = 0;
 
         for row in empty_rows {
-            self.expand_row(row + count);
-            count += 1;
+            self.expand_row(row + count, n);
+            count += n;
         }
 
         count = 0;
         for column in empty_columns {
-            self.expand_column(column + count);
-            count += 1;
+            self.expand_column(column + count, n);
+            count += n;
         }
     }
 
-    pub fn solve_p1(&self) -> usize {
+    pub fn solve(&self) -> usize {
         let mut done_pairs = HashSet::new();
         let mut sum = 0;
 
@@ -166,7 +166,7 @@ mod tests {
     #[test]
     fn test_expansion() {
         let mut universe = mk_universe(EXAMPLE);
-        universe.expand();
+        universe.expand(1);
 
         let expanded = mk_universe(EXAMPLE_EXPANDED);
 
@@ -176,8 +176,19 @@ mod tests {
     #[test]
     fn example_input_p1() {
         let mut universe = mk_universe(EXAMPLE);
-        universe.expand();
+        universe.expand(1);
 
-        assert_eq!(universe.solve_p1(), 374);
+        assert_eq!(universe.solve(), 374);
+    }
+
+    #[test]
+    fn example_input_p2() {
+        let mut universe = mk_universe(EXAMPLE);
+        universe.expand(9);
+        assert_eq!(universe.solve(), 1030);
+
+        let mut universe = mk_universe(EXAMPLE);
+        universe.expand(99);
+        assert_eq!(universe.solve(), 8410);
     }
 }
